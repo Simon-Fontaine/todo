@@ -26,7 +26,7 @@ def add_todo(user: str, todo: str):
 def list_todos(user: str):
     todos = get_todos(user)
     for todo in todos:
-        print(todo["todo"])
+        print(f"- {todo['todo']} (id: {todo['_id']})")
 
 
 def add_todo_input(user: str):
