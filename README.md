@@ -1,2 +1,3 @@
-# todo-list
+# todo
+
 Simple python todo list

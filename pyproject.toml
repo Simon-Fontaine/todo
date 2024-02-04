@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "todo"
+version = "0.1.0"
+description = "A simple python todo"
+authors = ["Simon Fontaine <74004726+Simon-Fontaine@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pymongo = "^4.6.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+todo = "todo.__main__:main"
