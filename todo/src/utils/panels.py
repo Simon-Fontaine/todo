@@ -18,5 +18,4 @@ def create_panel(title: str, content: str, color: Color = Color.INFO) -> Panel:
         title=title,
         border_style=str(color),
         title_align="left",
-        width=60,
     )
