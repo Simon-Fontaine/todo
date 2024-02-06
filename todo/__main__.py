@@ -15,7 +15,6 @@ def main():
         if args.version:
             display_version(console)
         elif args.action in ["add", "delete", "list", "done"]:
-            console.print(args)
             app(args)
         else:
             console.print(parser.format_help())
@@ -44,7 +43,7 @@ def create_arg_parser():
         default="medium",
         help="the priority of the todo (default: medium)",
     )
-    add_parser.add_argument("--end-date", help="when does the todo ends (DD/MM/YYYY)")
+    add_parser.add_argument("--end-date", help="when does the todo ends (YYYY-MM-DD)")
 
     # Delete subparsers
     delete_parser = sub_parsers.add_parser(

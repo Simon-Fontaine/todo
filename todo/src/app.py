@@ -24,7 +24,7 @@ def display_success(message: str):
 
 def validate_date(date_str: str) -> bool:
     try:
-        datetime.strptime(date_str, "%d/%m/%Y")
+        datetime.strptime(date_str, "%Y-%m-%d")
         return True
     except ValueError:
         return False
@@ -32,7 +32,7 @@ def validate_date(date_str: str) -> bool:
 
 def add_todo(user: str, todo: str, priority: str, end_date: str | None):
     if end_date and not validate_date(end_date):
-        display_error("Invalid date format. Use DD/MM/YYYY")
+        display_error("Invalid date format. Use YYYY-MM-DD")
         return
 
     try:
