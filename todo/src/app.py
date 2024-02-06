@@ -13,6 +13,10 @@ mongo_client = pymongo.MongoClient(os.environ.get("MONGO_URI"))
 mongo_database = mongo_client["todo"]
 console = Console()
 
+# TODO: faire une classe pour les todo avec des méthodes pour les manipuler
+# TODO: créé des fonctions qui renvoient les todos modifiés pour les afficher
+# TODO: plus facile pour les tests
+
 
 def display_error(message: str = "An error occurred"):
     """Display an error message in a panel
