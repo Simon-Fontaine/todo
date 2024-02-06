@@ -71,8 +71,7 @@ def add_todo(user: str, todo: str, priority: str, end_date: str | None):
         The end date of the todo
     """
     if end_date and not validate_date(end_date):
-        display_error("Invalid date format. Use YYYY-MM-DD")
-        return
+        return display_error("Invalid date format. Use YYYY-MM-DD")
 
     try:
         result = mongo_database[user].insert_one(
@@ -103,7 +102,7 @@ def delete_todo(user: str, todo_id: str):
         display_error(f"Failed to delete todo: {str(e)}")
 
 
-def list_todo(user: str, sort: bool = False, filter: str | None = None):
+def list_todos(user: str, sort: bool = False, filter: str | None = None):
     """List todos from the database
 
     Parameters
@@ -178,7 +177,7 @@ def app(args):
     elif args.action == "delete":
         delete_todo(args.user, args.todo_id)
     elif args.action == "list":
-        list_todo(args.user, args.sort, args.filter)
+        list_todos(args.user, args.sort, args.filter)
     elif args.action == "done":
         mark_todo_as_done(args.user, args.todo_id)
     else:
