@@ -6,6 +6,7 @@ from todo.src.app import app
 
 
 def main():
+    """Main entry point for the todo"""
     console = Console()
     parser = create_arg_parser()
 
@@ -23,6 +24,13 @@ def main():
 
 
 def create_arg_parser():
+    """Create the argument parser for the todo
+
+    Returns
+    -------
+    ArgumentParser
+        The argument parser for the todo
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-v", "--version", help="show the version of todo", action="store_true"
@@ -73,6 +81,13 @@ def create_arg_parser():
 
 
 def display_version(console):
+    """Display the version of the todo
+
+    Parameters
+    ----------
+    console : Console
+        The console to display the version on
+    """
     todo_version = version("todo")
     console.print(create_panel("Version", f"Current version: {todo_version}"))
 

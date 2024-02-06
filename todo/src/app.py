@@ -14,15 +14,41 @@ mongo_database = mongo_client["todo"]
 console = Console()
 
 
-def display_error(message: str):
+def display_error(message: str = "An error occurred"):
+    """Display an error message in a panel
+
+    Parameters
+    ----------
+    message : str, optional
+        The message to display in the panel, by default "An error occurred"
+    """
     console.print(create_panel("Error", message, Color.DANGER))
 
 
-def display_success(message: str):
+def display_success(message: str = "Operation successful"):
+    """Display a success message in a panel
+
+    Parameters
+    ----------
+    message : str, optional
+        The message to display in the panel, by default "Operation successful"
+    """
     console.print(create_panel("Success", message, Color.SUCCESS))
 
 
 def validate_date(date_str: str) -> bool:
+    """Validate a date string
+
+    Parameters
+    ----------
+    date_str : str
+        The date string to validate
+
+    Returns
+    -------
+    bool
+        Whether the date is valid or not
+    """
     try:
         datetime.strptime(date_str, "%Y-%m-%d")
         return True
@@ -31,6 +57,19 @@ def validate_date(date_str: str) -> bool:
 
 
 def add_todo(user: str, todo: str, priority: str, end_date: str | None):
+    """Add a todo to the database
+
+    Parameters
+    ----------
+    user : str
+        The user to add the todo for
+    todo : str
+        The todo to add
+    priority : str
+        The priority of the todo
+    end_date : str | None
+        The end date of the todo
+    """
     if end_date and not validate_date(end_date):
         display_error("Invalid date format. Use YYYY-MM-DD")
         return
@@ -45,6 +84,15 @@ def add_todo(user: str, todo: str, priority: str, end_date: str | None):
 
 
 def delete_todo(user: str, todo_id: str):
+    """Delete a todo from the database
+
+    Parameters
+    ----------
+    user : str
+        The user to delete the todo from
+    todo_id : str
+        The id of the todo to delete
+    """
     try:
         result = mongo_database[user].delete_one({"_id": ObjectId(todo_id)})
         if result.deleted_count == 0:
@@ -56,6 +104,17 @@ def delete_todo(user: str, todo_id: str):
 
 
 def list_todo(user: str, sort: bool = False, filter: str | None = None):
+    """List todos from the database
+
+    Parameters
+    ----------
+    user : str
+        The user to list the todos for
+    sort : bool, optional
+        Whether to sort the todos by date or not, by default False
+    filter : str | None, optional
+        Whether to filter the todos by priority or not, by default None
+    """
     try:
         results = mongo_database[user].find({"priority": filter} if filter else {})
         table = Table(
@@ -73,9 +132,9 @@ def list_todo(user: str, sort: bool = False, filter: str | None = None):
 
         for todo in results:
             table.add_row(
-                todo["todo"],
-                todo["priority"],
-                todo["end_date"],
+                str(todo["todo"]),
+                str(todo["priority"]),
+                str(todo["end_date"]),
                 str(todo["done"]),
                 str(todo["_id"]),
             )
@@ -85,6 +144,15 @@ def list_todo(user: str, sort: bool = False, filter: str | None = None):
 
 
 def mark_todo_as_done(user: str, todo_id: str):
+    """Mark a todo as done in the database
+
+    Parameters
+    ----------
+    user : str
+        The user to mark the todo as done for
+    todo_id : str
+        The id of the todo to mark as done
+    """
     try:
         result = mongo_database[user].update_one(
             {"_id": ObjectId(todo_id)}, {"$set": {"done": True}}
@@ -98,6 +166,13 @@ def mark_todo_as_done(user: str, todo_id: str):
 
 
 def app(args):
+    """The main application function
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        The arguments passed to the application
+    """
     if args.action == "add":
         add_todo(args.user, args.todo, args.priority, args.end_date)
     elif args.action == "delete":

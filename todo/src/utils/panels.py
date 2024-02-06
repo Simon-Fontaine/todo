@@ -12,7 +12,25 @@ class Color(enum.Enum):
         return self.value
 
 
-def create_panel(title: str, content: str, color: Color = Color.INFO) -> Panel:
+def create_panel(
+    title: str = "Undefined", content: str = "Undefined", color: Color = Color.INFO
+) -> Panel:
+    """Create a panel with a title and content
+
+    Parameters
+    ----------
+    title : str, optional
+        The title of the panel, by default "Undefined"
+    content : str, optional
+        The content of the panel, by default "Undefined"
+    color : Color, optional
+        The color of the panel, by default Color.INFO
+
+    Returns
+    -------
+    Panel
+        The panel with the title and content
+    """
     return Panel(
         content,
         title=title,
