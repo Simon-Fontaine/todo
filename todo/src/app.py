@@ -13,31 +13,16 @@ mongo_client = pymongo.MongoClient(os.environ.get("MONGO_URI"))
 mongo_database = mongo_client["todo"]
 console = Console()
 
-# TODO: faire une classe pour les todo avec des méthodes pour les manipuler
-# TODO: créé des fonctions qui renvoient les todos modifiés pour les afficher
-# TODO: plus facile pour les tests
 
-
-def display_error(message: str = "An error occurred"):
-    """Display an error message in a panel
+def drop_user_collection(user: str):
+    """Drop a user collection from the database
 
     Parameters
     ----------
-    message : str, optional
-        The message to display in the panel, by default "An error occurred"
+    user : str
+        The user collection to drop
     """
-    console.print(create_panel("Error", message, Color.DANGER))
-
-
-def display_success(message: str = "Operation successful"):
-    """Display a success message in a panel
-
-    Parameters
-    ----------
-    message : str, optional
-        The message to display in the panel, by default "Operation successful"
-    """
-    console.print(create_panel("Success", message, Color.SUCCESS))
+    mongo_database[user].drop()
 
 
 def validate_date(date_str: str) -> bool:
@@ -51,16 +36,21 @@ def validate_date(date_str: str) -> bool:
     Returns
     -------
     bool
-        Whether the date is valid or not
+        Whether the date string is valid
+
+    Raises
+    ------
+    ValueError
+        If the date string is invalid
     """
     try:
         datetime.strptime(date_str, "%Y-%m-%d")
         return True
     except ValueError:
-        return False
+        raise ValueError("Invalid date format. Please use YYYY-MM-DD")
 
 
-def add_todo(user: str, todo: str, priority: str, end_date: str | None):
+def add_todo(user: str, todo: str, priority: str, end_date: str = None) -> str:
     """Add a todo to the database
 
     Parameters
@@ -71,22 +61,33 @@ def add_todo(user: str, todo: str, priority: str, end_date: str | None):
         The todo to add
     priority : str
         The priority of the todo
-    end_date : str | None
-        The end date of the todo
-    """
-    if end_date and not validate_date(end_date):
-        return display_error("Invalid date format. Use YYYY-MM-DD")
+    end_date : str, optional
+        The end date of the todo, by default None
 
+    Returns
+    -------
+    str
+        The ID of the inserted todo
+
+    Raises
+    ------
+    Exception
+        If the todo could not be added
+    """
     try:
+        if end_date:
+            validate_date(end_date)
         result = mongo_database[user].insert_one(
             {"todo": todo, "priority": priority, "end_date": end_date, "done": False}
         )
-        display_success(f"Todo added successfully (id: {result.inserted_id})")
+        return str(result.inserted_id)
+    except ValueError as ve:
+        raise ValueError(str(ve))
     except Exception as e:
-        display_error(f"Failed to add todo: {str(e)}")
+        raise Exception(f"Failed to add todo: {str(e)}")
 
 
-def delete_todo(user: str, todo_id: str):
+def delete_todo(user: str, todo_id: str) -> int:
     """Delete a todo from the database
 
     Parameters
@@ -94,19 +95,26 @@ def delete_todo(user: str, todo_id: str):
     user : str
         The user to delete the todo from
     todo_id : str
-        The id of the todo to delete
+        The ID of the todo to delete
+
+    Returns
+    -------
+    int
+        The number of deleted todos
+
+    Raises
+    ------
+    Exception
+        If the todo could not be deleted
     """
     try:
         result = mongo_database[user].delete_one({"_id": ObjectId(todo_id)})
-        if result.deleted_count == 0:
-            display_error(f"Todo with id {todo_id} not found")
-        else:
-            display_success(f"Todo with id {todo_id} deleted successfully")
+        return result.deleted_count
     except Exception as e:
-        display_error(f"Failed to delete todo: {str(e)}")
+        raise Exception(f"Failed to delete todo: {str(e)}")
 
 
-def list_todos(user: str, sort: bool = False, filter: str | None = None):
+def list_todos(user: str, sort: bool = False, priority: str = None):
     """List todos from the database
 
     Parameters
@@ -115,74 +123,143 @@ def list_todos(user: str, sort: bool = False, filter: str | None = None):
         The user to list the todos for
     sort : bool, optional
         Whether to sort the todos by date or not, by default False
-    filter : str | None, optional
-        Whether to filter the todos by priority or not, by default None
+    priority : str, optional
+        The priority to filter the todos by, by default None
+
+    Returns
+    -------
+    Cursor | None
+        The results of the query
+
+    Raises
+    ------
+    Exception
+        If the todos could not be listed
     """
     try:
-        results = mongo_database[user].find({"priority": filter} if filter else {})
-        table = Table(
-            header_style="bold bright_white",
-            min_width=60,
-        )
-        table.add_column("Todo", style="yellow")
-        table.add_column("Priority", style="white")
-        table.add_column("End Date", style="white")
-        table.add_column("Done", style="white")
-        table.add_column("ID", style="bright_black")
-
+        results = mongo_database[user].find({"priority": priority} if priority else {})
         if sort:
             results = results.sort("end_date", pymongo.ASCENDING)
-
-        for todo in results:
-            table.add_row(
-                str(todo["todo"]),
-                str(todo["priority"]),
-                str(todo["end_date"]),
-                str(todo["done"]),
-                str(todo["_id"]),
-            )
-        console.print(table)
+        return results
     except Exception as e:
-        display_error(f"Failed to list todos: {str(e)}")
+        raise Exception(f"Failed to list todos: {str(e)}")
 
 
-def mark_todo_as_done(user: str, todo_id: str):
-    """Mark a todo as done in the database
+def mark_as_done(user: str, todo_id: str) -> int:
+    """Mark a todo as done
 
     Parameters
     ----------
     user : str
         The user to mark the todo as done for
     todo_id : str
-        The id of the todo to mark as done
+        The ID of the todo to mark as done
+
+    Returns
+    -------
+    int
+        The number of modified todos
+
+    Raises
+    ------
+    Exception
+        If the todo could not be marked as done
     """
     try:
         result = mongo_database[user].update_one(
             {"_id": ObjectId(todo_id)}, {"$set": {"done": True}}
         )
-        if result.modified_count == 0:
-            display_error(f"Todo with id {todo_id} not found")
-        else:
-            display_success(f"Todo with id {todo_id} marked as done successfully")
+        return result.modified_count
     except Exception as e:
-        display_error(f"Failed to mark todo as done: {str(e)}")
+        raise Exception(f"Failed to mark todo as done: {str(e)}")
 
 
-def app(args):
-    """The main application function
+def display_error(message: str = "An error occurred"):
+    """Display an error message
 
     Parameters
     ----------
-    args : argparse.Namespace
-        The arguments passed to the application
+    message : str, optional
+        The error message to display, by default "An error occurred"
+
+    Returns
+    -------
+    Panel
+        The error message panel
     """
-    if args.action == "add":
-        add_todo(args.user, args.todo, args.priority, args.end_date)
-    elif args.action == "delete":
-        delete_todo(args.user, args.todo_id)
-    elif args.action == "list":
-        list_todos(args.user, args.sort, args.filter)
-    elif args.action == "done":
-        mark_todo_as_done(args.user, args.todo_id)
-    else:
-        display_error("Invalid action")
+    return create_panel("Error", message, Color.DANGER)
+
+
+def display_success(message: str = "Operation successful"):
+    """Display a success message
+
+    Parameters
+    ----------
+    message : str, optional
+        The success message to display, by default "Operation successful"
+
+    Returns
+    -------
+    Panel
+        The success message panel
+    """
+    return create_panel("Success", message, Color.SUCCESS)
+
+
+def display_table(results):
+    """Display a table of todos
+
+    Parameters
+    ----------
+    results : Cursor
+        The results of the query
+    """
+    table = Table(header_style="bold bright_white", min_width=75)
+    table.add_column("Todo", style="yellow")
+    table.add_column("Priority", style="white")
+    table.add_column("End Date", style="white")
+    table.add_column("Done", style="white")
+    table.add_column("ID", style="bright_black")
+
+    for todo in results:
+        table.add_row(
+            str(todo["todo"]),
+            str(todo["priority"]),
+            str(todo["end_date"]),
+            str(todo["done"]),
+            str(todo["_id"]),
+        )
+    console.print(table)
+
+
+def app(args):
+    """Run the todo app
+
+    Parameters
+    ----------
+    args : Namespace
+        The command-line arguments
+    """
+    try:
+        if args.action == "add":
+            todo_id = add_todo(args.user, args.todo, args.priority, args.end_date)
+            console.print(display_success(f"Todo added successfully (id: {todo_id})"))
+        elif args.action == "delete":
+            deleted_count = delete_todo(args.user, args.todo_id)
+            if deleted_count:
+                console.print(display_success("Todo deleted successfully"))
+            else:
+                console.print(display_error(f"Todo with id {args.todo_id} not found"))
+        elif args.action == "list":
+            results = list_todos(args.user, args.sort, args.priority)
+            display_table(results)
+        elif args.action == "done":
+            modified_count = mark_as_done(args.user, args.todo_id)
+            if modified_count:
+                console.print(display_success("Todo marked as done successfully"))
+            else:
+                console.print(display_error(f"Todo with id {args.todo_id} not found"))
+        else:
+            console.print(display_error("Invalid action"))
+    except Exception as e:
+        console.print(display_error(str(e)))

@@ -1,13 +1,8 @@
-import os
 import random
 import string
-import pymongo
 import unittest
 
-from todo.src.app import add_todo
-from dotenv import load_dotenv
-
-load_dotenv()
+from todo.src.app import add_todo, drop_user_collection
 
 
 def get_random_string(length):
@@ -17,65 +12,25 @@ def get_random_string(length):
 
 class TestAddTodo(unittest.TestCase):
     def setUp(self):
-        self.mongo_client = pymongo.MongoClient(os.environ.get("MONGO_URI"))
-        self.mongo_database = self.mongo_client["todo"]
         self.user = get_random_string(20)
         self.todo = get_random_string(20)
         self.priority = "low"
         self.end_date = "2022-12-31"
 
     def tearDown(self):
-        self.mongo_database[self.user].drop()
+        drop_user_collection(self.user)
 
     def test_add_todo(self):
-        add_todo(self.user, self.todo, self.priority, self.end_date)
-        self.assertTrue(
-            self.mongo_database[self.user].find_one(
-                {
-                    "todo": self.todo,
-                    "priority": self.priority,
-                    "end_date": self.end_date,
-                }
-            )
-        )
+        todo_id = add_todo(self.user, self.todo, self.priority, self.end_date)
+        self.assertIsNotNone(todo_id)
 
-    def test_add_todo_with_no_end_date(self):
-        end_date = None
+    def test_add_todo_no_end_date(self):
+        todo_id = add_todo(self.user, self.todo, self.priority, None)
+        self.assertIsNotNone(todo_id)
 
-        add_todo(
-            self.user,
-            self.todo,
-            self.priority,
-            end_date,
-        )
-        self.assertTrue(
-            self.mongo_database[self.user].find_one(
-                {
-                    "todo": self.todo,
-                    "priority": self.priority,
-                    "end_date": end_date,
-                }
-            )
-        )
-
-    def test_add_todo_wrong_date_format(self):
-        end_date = "2022/12/31"
-
-        add_todo(
-            self.user,
-            self.todo,
-            self.priority,
-            end_date,
-        )
-        self.assertFalse(
-            self.mongo_database[self.user].find_one(
-                {
-                    "todo": self.todo,
-                    "priority": self.priority,
-                    "end_date": end_date,
-                }
-            )
-        )
+    def test_add_todo_invalid_end_date(self):
+        with self.assertRaises(ValueError):
+            add_todo(self.user, self.todo, self.priority, "2022-12-32")
 
 
 if __name__ == "__main__":

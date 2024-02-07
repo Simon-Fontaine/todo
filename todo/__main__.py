@@ -67,7 +67,10 @@ def create_arg_parser():
         "--sort", action="store_true", help="sort todos by end date"
     )
     list_parser.add_argument(
-        "--filter", choices=["low", "medium", "high"], help="filter todos by priority"
+        "-p",
+        "--priority",
+        choices=["low", "medium", "high"],
+        help="filter todos by priority",
     )
 
     # Done subparsers
