@@ -1,17 +1,18 @@
-import os
+import json
 import pymongo
+from rich import box
+from rich.padding import Padding
 from bson.objectid import ObjectId
-from dotenv import load_dotenv
 from rich.table import Table
-from rich.console import Console
-from todo.src.utils.panels import Color, create_panel
 from datetime import datetime
 
-load_dotenv()
 
-mongo_client = pymongo.MongoClient(os.environ.get("MONGO_URI"))
+f = open("secrets.json")
+data = json.load(f)
+f.close()
+
+mongo_client = pymongo.MongoClient(data["mongo_uri"])
 mongo_database = mongo_client["todo"]
-console = Console()
 
 
 def drop_user_collection(user: str):
@@ -174,92 +175,129 @@ def mark_as_done(user: str, todo_id: str) -> int:
         raise Exception(f"Failed to mark todo as done: {str(e)}")
 
 
-def display_error(message: str = "An error occurred"):
+def display_error(console, message: str = "An error occurred", id: str = None):
     """Display an error message
 
     Parameters
     ----------
+    console : Console
+        The console to display the error on
     message : str, optional
-        The error message to display, by default "An error occurred"
-
-    Returns
-    -------
-    Panel
-        The error message panel
+        The error message, by default "An error occurred"
+    id : str, optional
+        The ID of the error, by default None
     """
-    return create_panel("Error", message, Color.DANGER)
+    message = (
+        f"[bold red][ERROR][/bold red] {message} [black](id: {id})[black]"
+        if id
+        else f"[bold red][ERROR][/bold red] {message}"
+    )
+
+    console.print(Padding(message, (1, 0, 1, 0)))
 
 
-def display_success(message: str = "Operation successful"):
+def display_success(console, message: str = "Operation successful", id: str = None):
     """Display a success message
 
     Parameters
     ----------
+    console : Console
+        The console to display the success message on
     message : str, optional
-        The success message to display, by default "Operation successful"
-
-    Returns
-    -------
-    Panel
-        The success message panel
+        The success message, by default "Operation successful"
+    id : str, optional
+        The ID of the success message, by default None
     """
-    return create_panel("Success", message, Color.SUCCESS)
+    message = (
+        f"[bold green][SUCCESS][/bold green] {message} [black](id: {id})[black]"
+        if id
+        else f"[bold green][SUCCESS][/bold green] {message}"
+    )
+
+    console.print(Padding(message, (1, 0, 1, 0)))
 
 
-def display_table(results):
+def display_table(console, results):
     """Display a table of todos
 
     Parameters
     ----------
+    console : Console
+        The console to display the table on
     results : Cursor
-        The results of the query
+        The results to display in the table
     """
-    table = Table(header_style="bold bright_white", min_width=75)
-    table.add_column("Todo", style="yellow")
-    table.add_column("Priority", style="white")
-    table.add_column("End Date", style="white")
-    table.add_column("Done", style="white")
-    table.add_column("ID", style="bright_black")
+    results = list(results)
+
+    done_todos = sum(1 for todo in results if todo["done"])
+
+    num_results = len(results)
+    completion_percentage = (
+        round(done_todos / num_results * 100) if num_results != 0 else 0
+    )
+
+    table = Table(
+        min_width=75,
+        row_styles=["none"],
+        border_style="yellow",
+        header_style="bold magenta",
+        footer_style="bold black",
+        box=box.SIMPLE,
+        show_footer=True,
+    )
+    table.add_column("End Date")
+    table.add_column("Todo")
+    table.add_column("Priority")
+    table.add_column("Done", "Status")
+    table.add_column(
+        "ID", f"{completion_percentage} % Completed ( {done_todos} / {num_results} )"
+    )
 
     for todo in results:
+        done_style = "green" if todo["done"] else "red"
         table.add_row(
+            str(todo["end_date"]),
             str(todo["todo"]),
             str(todo["priority"]),
-            str(todo["end_date"]),
             str(todo["done"]),
             str(todo["_id"]),
+            style=done_style,
         )
     console.print(table)
 
 
-def app(args):
-    """Run the todo app
+def app(console, args):
+    """The main application logic
 
     Parameters
     ----------
-    args : Namespace
-        The command-line arguments
+    console : Console
+        The console to display messages on
+    args : argparse.Namespace
+        The parsed arguments
     """
     try:
         if args.action == "add":
             todo_id = add_todo(args.user, args.todo, args.priority, args.end_date)
-            console.print(display_success(f"Todo added successfully (id: {todo_id})"))
+            display_success(console, "Todo added successfully", todo_id)
         elif args.action == "delete":
             deleted_count = delete_todo(args.user, args.todo_id)
             if deleted_count:
-                console.print(display_success("Todo deleted successfully"))
+                display_success(console, "Todo deleted successfully", args.todo_id)
             else:
-                console.print(display_error(f"Todo with id {args.todo_id} not found"))
+                display_error(console, "Todo not found", args.todo_id)
         elif args.action == "list":
             results = list_todos(args.user, args.sort, args.priority)
-            display_table(results)
+            display_table(console, results)
         elif args.action == "done":
             modified_count = mark_as_done(args.user, args.todo_id)
             if modified_count:
-                console.print(display_success("Todo marked as done successfully"))
+                display_success(
+                    console, "Todo marked as done successfully", args.todo_id
+                )
             else:
-                console.print(display_error(f"Todo with id {args.todo_id} not found"))
+                display_error(console, "Todo not found", args.todo_id)
         else:
-            console.print(display_error("Invalid action"))
+            display_error(console, f"Invalid action: {args.action}")
     except Exception as e:
-        console.print(display_error(str(e)))
+        display_error(console, str(e))

@@ -1,13 +1,14 @@
 import argparse
 from rich.console import Console
 from importlib.metadata import version
-from todo.src.utils.panels import Color, create_panel
+from todo.src.app import display_error, display_success
 from todo.src.app import app
 
 
 def main():
     """Main entry point for the todo"""
     console = Console()
+
     parser = create_arg_parser()
 
     args = parser.parse_args()
@@ -16,11 +17,11 @@ def main():
         if args.version:
             display_version(console)
         elif args.action in ["add", "delete", "list", "done"]:
-            app(args)
+            app(console, args)
         else:
             console.print(parser.format_help())
     except argparse.ArgumentError as e:
-        console.print(create_panel("Error", str(e), Color.DANGER))
+        display_error(str(e))
 
 
 def create_arg_parser():
@@ -92,7 +93,7 @@ def display_version(console):
         The console to display the version on
     """
     todo_version = version("todo")
-    console.print(create_panel("Version", f"Current version: {todo_version}"))
+    display_success(console, f"Current version: {todo_version}")
 
 
 if __name__ == "__main__":
