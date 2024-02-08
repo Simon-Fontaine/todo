@@ -278,19 +278,21 @@ def app(console, args):
     """
     try:
         if args.action == "add":
-            todo_id = add_todo(args.user, args.todo, args.priority, args.end_date)
+            todo_id = add_todo(
+                args.user.lower(), args.todo, args.priority, args.end_date
+            )
             display_success(console, "Todo added successfully", todo_id)
         elif args.action == "delete":
-            deleted_count = delete_todo(args.user, args.todo_id)
+            deleted_count = delete_todo(args.user.lower(), args.todo_id)
             if deleted_count:
                 display_success(console, "Todo deleted successfully", args.todo_id)
             else:
                 display_error(console, "Todo not found", args.todo_id)
         elif args.action == "list":
-            results = list_todos(args.user, args.sort, args.priority)
+            results = list_todos(args.user.lower(), args.sort, args.priority)
             display_table(console, results)
         elif args.action == "done":
-            modified_count = mark_as_done(args.user, args.todo_id)
+            modified_count = mark_as_done(args.user.lower(), args.todo_id)
             if modified_count:
                 display_success(
                     console, "Todo marked as done successfully", args.todo_id
